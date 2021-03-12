@@ -1,0 +1,147 @@
+\section{\texorpdfstring{Uvod, Cko}{Uvod, Cko}}
+\vspace{5mm}
+\large
+
+%\begin{definition}
+%Matice sousednosti grafu G
+%\end{definition}
+
+\subsection{Uvod}
+
+\begin{itemize}
+	\item V tomto předmětu se zaměříme na PC hw architekturu.
+	\item Cílovým OS je Linux, jelikož běží na většině super počítačů, klastrů apod.
+		Ostatní OS stavěné na výkon se chovají podobně.
+	\item Cko jako cílový jazyk (bohužel občas místo kompilátoru je komplikator).
+		GCC jako cílový kompilátor.
+\end{itemize}
+
+\begin{example}
+	Motivační příklad: Transpozice matic.
+	//TODO obrázek
+
+	a) Křivka naivního algoritmu roste (proč? na RAMu by neměla) + spiky.
+	\begin{itemize}
+		\item Na začátku skoky lze vysvětlit velkosti $L3$ cache, ale ne všude.
+			Hlavně spacial lokality v hlavní paměti.
+		\item skoku u $2^i$ protože cache není plně asociativní.
+			Z množiny čísel se stejnými spodní bity, jenom málo se může dostat to cache na stejné místo.
+			Podobně u dělitelů mocnin 2ky.
+	\end{itemize}
+	b) Je to naivní algoritmus + snažíme se vyhnout mocninám 2ky tak, že přidáváme konstantní mezery mezi řádky.
+	Znázorňuje zelená křivka.
+	Proč roste jako exp na nejmenších velikostech? Vysvětlíme později.
+
+	c) Tiling algoritmus \\
+	d) Transpose and swap (cache oblivious algoritmus).
+	Chová se o něco lip než tiling.
+
+\end{example}
+
+\begin{note}
+	Dotaz: má smysl při inicializaci algoritmu zjistit velikost cache?
+
+	Obecná odpověď je spíše NE, ze 2 důvodů:
+	\begin{enumerate}
+		\item Reálná hierarchie může být extra složitá. Jenom velikost nepomůže.
+		\item U Transpose and Swap větší role hraje režie rekurze.
+			Protože rekurze stoji víc než přistup do paměti.
+			Takže se musíme zastavit na takové největší velikosti podproblému, který se vejde do cachi.
+			Pokud víme, že $L_1 > 16kb$, tak funguje matice $64x64$.
+		\item Nastavení parametrů může škodit kompilaci.
+			Jde ale obejit tak, že zkompilujeme několik verzi algoritmu s různé parametry, pak rychlé zjistit který je rychlejší a nadále používat.
+
+			Např Linux kernel má k dispozici 4 algoritmy pro sw REID. Při bootu zkontroluje který je rychlejší a bude používat po celou dobu.
+	\end{enumerate}
+\end{note}
+
+\subsection{Cko}
+Tady budou pouze komentáře k slajdům \href{http://mj.ucw.cz/papers/cecko.pdf}{Uvod do Cka}.
+
+\paragraph{Vývoj dialektů Cka}
+\begin{enumerate}
+	\item K\&R Cko, původní návrh popsaný v knize.
+	\item První standardizace, ANSI a ISO.
+		Je známá jako C89. Z ní se vytvořili dialekty dle překladače a taky C++.
+	\item C99 nejlepší featury z dialektů.
+		Pak vznikla ještě C11 verze a C17 (druhá jen opravovala chyby první).
+	\item Občas Cko přebralo featury zpět od C++, např v C11 memory management pro paralelní programovaní.
+\end{enumerate}
+
+\paragraph{Číselné typy}
+\begin{enumerate}
+	\item Není specifikováno, jestli \textbf{char} je \emph{signed} nebo \emph{unsigned}.
+	\item Typ \textbf{bool} máme protože kompilátor lepe optimalizuje.
+		Taky lepší semantický význam.
+		Jmenuje se ale \textbf{\_Bool} aby kompilace nerozbila stávající programy, které již měli bool přes \emph{typedef}.
+		Pokud ale chci pravě \textbf{bool}, stačí použit $include <stdbool.h>$.
+	\item stejně jako v C++, existuji typy pevné délky, např u\_int32.
+		Hlavně se používají u síťových protokolu, taky inline assembler.
+\end{enumerate}
+
+Union má pouze jednu ze dvou položek v pamětí, sám neví který to je. Je potřeba odvodit z kontextu.
+
+\paragraph{Částečné typy}
+\begin{enumerate}
+	\item struct who\_knowns\_what *
+	\item int f() - nevíme parametry
+	\item int f(void) - nemá žádný parametr
+	\item int [] - pole neznámé velikosti
+\end{enumerate}
+
+\paragraph{Reprezentace v pamětí}
+\begin{enumerate}
+	\item pozor na bitová pole při paralelním programovaní. (necelé bytů se hlavně používají hlavně pro síťové pakety)
+	\item pozor 2kový doplněk není zaručený.
+	\item C11 má operátor \_AlignOf(type), nejčastěji velikost typu.
+	\item překladač nesmí prohodit pořadí položek uvnitř.
+		Protože se zaručuje, že 2 struktury zděděné ze stejného typů mají stejný prefix v pamětí.
+\end{enumerate}
+
+\paragraph{Literály}
+\begin{enumerate}
+	\item Pozor, přidaní nuly na začátek změní literál na 8 soustavu.
+		Změní se i hodnota.
+	\item Veškeré celočíselné počítaní se provádí v typu int.
+	\item Floating-point literály bez ztráty přesností se zapisuji s exponentem, například 0x1.ffep10, kde p je oddělovač pro exponent.
+\end{enumerate}
+
+\paragraph{Operátory}
+\begin{itemize}
+	\item používáme pointer->item, protože při zápisu *pointer.item tečka má větší prioritu, museli bychom psát (*pointer).item
+	\item $a = x++$ pak $a$ má původní hodnotu. $a = ++x$ pak $a$ má hodnotu po inkrementu.
+		$x = x++$ je hloupost, není definované.
+	\item Hádanka $a+++++a = $ ??
+	\item nepoužívat bitové operace u znaménkových typů
+	\item $!!x$ je přetypovaní na bool
+	\item nemodulit záporným číslem
+	\item float není lineárně uspořádané. $NaN \ne NaN$.
+	\item počítaní s unsigned a signed dává unsigned
+	\item nepsat $printf("\%d \%d \%d", a++, a++, a++$.
+		Dobrým zvykem je měnit hodnotu proměnné pouze jednou v příkazu.
+\end{itemize}
+
+Nedefinované chovaní - cokoliv se může stát.
+
+\paragraph{Pointry}
+\begin{itemize}
+	\item pointer na pole je něco jiného než pointer na první prvek. S pointrem na pole se ale běžně nepracuje.
+	\item pointer na fce se zapisuje $int (*f)(int a);$
+	\item nepoužívat složitější konstrukce jako pointer na pointer poli pointrů.
+\end{itemize}
+
+\paragraph{Modifikátory}
+\begin{itemize}
+	\item u \emph{const} záleží kde je. Protože $const int *x$ je konstantní integer, když $int * const x$ je const pointer.
+	\item \emph{register} int x - je historický, hint překladači, že může uložit do registru místo pamětí.
+		Pak ale nejde použit pointer. Dneska se nepoužívá, překladač optimalizuje lepe.
+	\item \emph{volatile} (hist že se může nečekaně změnit). Třeba namapovaná periferie do pamětí.
+		Třeba nějaký port cpe data, pokud nenapíšeme volatile, tak překladač může vyoptimalizovat 2 čtení na 1.
+		Lze taky použit pro zrušení optimalizace pro měření.
+	\item \emph{restrict} - na adresu lze přistupovat pouze tímto pointrem nebo odvozeným.
+		Pak překladač lepe optimalizuje. Např lze použit při kopirovaní pamětí, zaručí že 2 useky se nepřekrývají.
+		Používá to funkce memcp nebo memmove.
+	\item static int x - u globální jako private. Je viditelná uvnitř modulu.
+	\item extern int x - společná proměnná pro několik modulu, stejný název.
+	\item inline - místo volaní se vloží. Dneska překladač um sám.
+\end{itemize}
