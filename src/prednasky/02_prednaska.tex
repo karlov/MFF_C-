@@ -1,0 +1,170 @@
+\section{\texorpdfstring{Hardware architecture}{Hardware architecture}}
+\vspace{5mm}
+\large
+
+\subsection{Historický vývoj architektur}
+Historicky procesor 8086 $\to$ x86 $\to$ AMD64.
+
+U x86 nás zajímá 32b mod s lineární adresaci.
+DOS by fungoval na stejném procesoru trochu jinak.
+
+\subsection{x86}
+
+\paragraph{Datové typy}
+\begin{itemize}
+	\item integer 8/16/32 a nějaké operace s 64b integery.
+	\item float\\
+		a) 32 (24 + 8) - float\\
+		b) 64 (53 + 11) - double\\
+		c) 80 (64 + 16) - long double\\
+		d) jen občas 16 (11 + 5) pouze ve vektorech.
+		Používá se v grafice
+	\item vektory 128b (homogenní, všechno kromě long double jako základní typ)
+\end{itemize}
+
+\paragraph{Paměť}
+Z pohledu programu pole bytů. Von Neumann architektura, společná pro kod a data.
+Ne všechna častí paměti lze používat. Když šáhneme na zakázanou část, tak OS zabije.
+
+Přistup na špatně zarovnaný vektor selže!
+
+\paragraph{Registry}
+Univerzální registry, lze dělat skoro cokoliv.
+\begin{itemize}
+	\item EAX\\
+		Původně na 8086 byl registr AX, spodní část AL, horní AH.\\
+		Pak přidali ještě 32 bitů.
+	\item EBX
+	\item ECX
+	\item EDX
+\end{itemize}
+
+Registry co složili pro cílovou adresu.
+Dnes jsou univerzální, ale na rozdíl od EAX nelze použit dolní častí.
+\begin{itemize}
+	\item ESI - source index
+	\item EDI - destination index
+\end{itemize}
+
+\begin{itemize}
+	\item EBP\\
+		BP - base pointer. Ukazuje dle konvence na oblast v paměti kde jsou lokální proměnné a parametry. Dnes už je univerzálním.
+	\item ESP\\
+		SP - stack pointer. ESP ukazuje na poslední adresu v Stacku.
+	\item EPP - instruction pointer.
+	\item EFLAGS - každé bity mají jiný význam.\\
+		Např zero - poslední aritmetická operace byla 0.\\
+		Přetečení (znaménkové a bezznaménkové)\\
+		Řidiší bity, např D - direction.\\
+\end{itemize}
+
+Floutové registry
+\begin{itemize}
+	\item ST0 - ST7, tvoří float stack. Dnes se moc nepoužívá
+	\item FPUSR (FPU status registr) - jako flagy.
+	\item FPUCR (FPU control registr) - řídí jestli při dělení 0 mu vyskytnout výjimka apod.
+\end{itemize}
+
+Registry vektorové jednotky
+\begin{itemize}
+	\item XMM0 - XMM7 128 bitové
+	\item YMM0 - YMM7 256 bitové
+	\item MXCSR (control and status) - další flagy.
+\end{itemize}
+
+\begin{note}
+	Lze oddělovat Int, Float, Vector část procesoru.
+\end{note}
+
+\paragraph{Assembler}
+Intel (windows) vs AT\&T (linux).
+
+Např přičteni 1 k registru EBX
+
+\begin{itemize}
+	\item Intel: ADD EBX, 1
+	\item  AT\&T addl \$1, \%ebx \\
+		kde l znamená (long), q by bylo 64 atd.\\
+		před literálem je dolar, jinak by jednička znamenala místo v paměti.
+\end{itemize}
+
+Např přičteni 1 k místu v paměti uložené registru EBX
+\begin{itemize}
+	\item Intel: ADD DWORD PTR [EBX], 1
+	\item  AT\&T addl \$1, (\%ebx)
+\end{itemize}
+
+\begin{agreement}
+	Jelikož jsme na Linuxu, budeme používat AT\&T.
+\end{agreement}
+
+Operandy instrukce
+
+\begin{itemize}
+	\item \$ číslo
+	\item \%registr
+	\item číslo - adresa v paměti
+	\item (\%reg) - adresace registrem
+	\item číslo (\%registr) - adresa = reg + číslo
+	\item číslo (\%r1, \%r2, mul) - $adresa = r1 + mult * r2 + číslo$ \\
+		mul je 1,2,4,8.\\
+		hlavně se hodí u adresaci poli.
+\end{itemize}
+
+Nechceme psát v assembleru, ale rozumět co vygeneroval překladač.
+Pokud je neefektivní, chceme mu pomoct kod zlepšit.
+
+\paragraph{ABI}
+ABI - application binary interface, specifické pro architekturu, OS a jazyk (C).
+Ostatní jazyky umí linkovat C-kovou knihovnu.
+
+Řiká např kde je program v paměti. Ale nás toto nezajímá.
+
+Např volací konvence.
+Bylo by dobrý předávat parametry v registrech. Toto obecně nejde, protože registrů je málo a můžou se použit pro jiné veci.
+Proto je dohodnutí že volající přidává parametry na stack. Dolu je první argument.
+Je potřeba pro funkce s proměnlivým počtu argumentů.
+
+Někde na zásobníku je návratová adresa.
+Nahoře od ni je na starosti Volajícího. Pod ní Volaný.
+
+\begin{definition}
+	Stack frame -
+\end{definition}
+
+Výsledek funkce se vrátí buď v EAX nebo EAX/ADX (pokud větší než 64).
+Float v ST0.
+Pokud struktura, tak výjimka, volaný uloží v paměti. Posílá adresu v paměti.
+
+\paragraph{Scratch} Věci co může měnit volaný:
+\begin{itemize}
+	\item EAX, ECX, EDX
+	\item ST0-ST7
+	\item část EFLAGS.
+\end{itemize}
+
+Zbytek musí zůstat jako dříve.
+
+EBX není scratch, protože se používá pro sdílené knihovny, musí pracovat s relativní paměti (nahrávají se kamkoliv).
+EBX ukazuje kde jsou data sdílené knihovny.
+
+\subsection{AMD64}
+Změny oproti x86:
+\begin{itemize}
+	\item EAX se rozšíří na horních 32 bitů $\to$ RAX.\\
+		Analogicky pro EBX, ECX, EDX, ESI, EDI, EBP, ESP.\\
+		Jsou univerzální proto se jmenuji R0-R7.\\
+		Pozor, 16 bitové instrukce jsou pomalé.
+	\item Nově máme R8-R15.
+	\item FPU se moc nezměnila, jen veškeré počítaní jsou vektorové.
+		Pozor nemám 80 bitový float, na toto se stále používá x86.
+	\item Nově XMM8-15, YMM8-15.
+\end{itemize}
+
+Jelikož registrů je hodně, parametry se přidávají v registrech.
+Pokud se nevešlo - tak na zásobníku.
+Celkem 6 celočíselných argumentů v registrech, 8 float argumentů.
+
+
+\subsection{Disassebler}
+

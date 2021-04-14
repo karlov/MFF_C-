@@ -13,7 +13,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{textcomp}
 \usepackage{tikz}
-\usepackage{svg}
+%\usepackage{svg}
 \usepackage{listings}
 \usepackage{subfiles}
 \usepackage[affil-it]{authblk}
@@ -35,7 +35,10 @@
 \crefname{equation}{}{}
 \crefname{theorem}{}{}
 \usepackage{amsthm}
-\usepackage{mathtools}
+%\usepackage{mathtools}
+
+\usepackage{alltt}    % monospace for code
+\newcommand\tab[1][1cm]{\hspace*{#1}}
 
 \makeatletter
 \def\th@plain{%
@@ -128,7 +131,7 @@
 \newtheorem*{notation*}{Značení}
 \newtheorem{agreement}[theorem]{Úmluva}
 \newtheorem{reminder}[theorem]{Připomenutí}
-\newtheorem{excercise}[theorem]{Cvičení}
+\newtheorem{exercise}[theorem]{Cvičení}
 
 %\theoremstyle{remark}
 \newtheorem{example}[theorem]{Příklad}
@@ -162,9 +165,9 @@
 \newpage
 
 \subfile{prednasky/01_prednaska}
-%\subfile{prednasky/02_prednaska}
-%\subfile{prednasky/03_prednaska}
-%\subfile{prednasky/04_prednaska}
+\subfile{prednasky/02_prednaska}
+\subfile{prednasky/03_prednaska}
+\subfile{prednasky/04_prednaska}
 %\subfile{prednasky/05_prednaska}
 %\subfile{prednasky/06_prednaska}
 %\subfile{prednasky/07_prednaska}

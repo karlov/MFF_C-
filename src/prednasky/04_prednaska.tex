@@ -1,0 +1,31 @@
+\section{\texorpdfstring{Profilovaní, peft, cachegrind}{Profilovaní, peft, cachegrind}}
+\vspace{5mm}
+\large
+
+\subsection{Zajimave perf udalosti}
+\begin{itemize}
+	\item TLB
+		\begin{itemize}
+			\item dTLB-load-misses / dTLB-loads
+			\item iTLB-load-misses / iTLB-loads
+		\end{itemize}
+	\item Počty cache misses
+		\begin{itemize}
+			\item L1-dcache-load-misses
+			\item LLC-load-misses \# last-level cache, i.e. L3
+			\item LLC-store-misses \# last-level cache, i.e. L3
+			\item l2\_rqsts.references \# všechny požadavky na L2
+			\item l2\_rqsts.miss \# L2 misses
+			\item longest\_lat\_cache.reference \# všechny požadavky na L3
+			\item longest\_lat\_cache.miss \# L3 misses
+		\end{itemize}
+	\item Počet cyklů, kdy CPU pipeline stála a na něco čekala \\
+	cycle\_activity.stalls\_total
+	\item Počet cyklů, kdy CPU pipeline stála kvůli čekání na L1/L2/L3 cache
+		\begin{itemize}
+			\item cycle\_activity.stalls\_l1d\_miss
+			\item cycle\_activity.stalls\_l2\_miss
+			\item cycle\_activity.stalls\_l3\_miss
+		\end{itemize}
+\end{itemize}
+

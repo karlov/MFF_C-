@@ -2,10 +2,6 @@
 \vspace{5mm}
 \large
 
-%\begin{definition}
-%Matice sousednosti grafu G
-%\end{definition}
-
 \subsection{Uvod}
 
 \begin{itemize}
@@ -117,7 +113,7 @@ Union má pouze jednu ze dvou položek v pamětí, sám neví který to je. Je p
 	\item nemodulit záporným číslem
 	\item float není lineárně uspořádané. $NaN \ne NaN$.
 	\item počítaní s unsigned a signed dává unsigned
-	\item nepsat $printf("\%d \%d \%d", a++, a++, a++$.
+	\item nepsat $printf("\%d \%d \%d", a++, a++, a++)$.
 		Dobrým zvykem je měnit hodnotu proměnné pouze jednou v příkazu.
 \end{itemize}
 
@@ -126,13 +122,22 @@ Nedefinované chovaní - cokoliv se může stát.
 \paragraph{Pointry}
 \begin{itemize}
 	\item pointer na pole je něco jiného než pointer na první prvek. S pointrem na pole se ale běžně nepracuje.
-	\item pointer na fce se zapisuje $int (*f)(int a);$
+	\item pointer na fce se zapisuje $int (*f)(int\ a);$
 	\item nepoužívat složitější konstrukce jako pointer na pointer poli pointrů.
 \end{itemize}
 
 \paragraph{Modifikátory}
 \begin{itemize}
-	\item u \emph{const} záleží kde je. Protože $const int *x$ je konstantní integer, když $int * const x$ je const pointer.
+	\item u \emph{const} záleží kde je. Protože
+
+	\begin{alltt}
+		const int *x
+	\end{alltt}
+		je konstantní integer, když
+	\begin{alltt}
+		int * const x
+	\end{alltt}
+		je const pointer.
 	\item \emph{register} int x - je historický, hint překladači, že může uložit do registru místo pamětí.
 		Pak ale nejde použit pointer. Dneska se nepoužívá, překladač optimalizuje lepe.
 	\item \emph{volatile} (hist že se může nečekaně změnit). Třeba namapovaná periferie do pamětí.
@@ -140,8 +145,253 @@ Nedefinované chovaní - cokoliv se může stát.
 		Lze taky použit pro zrušení optimalizace pro měření.
 	\item \emph{restrict} - na adresu lze přistupovat pouze tímto pointrem nebo odvozeným.
 		Pak překladač lepe optimalizuje. Např lze použit při kopirovaní pamětí, zaručí že 2 useky se nepřekrývají.
-		Používá to funkce memcp nebo memmove.
+		Používá to funkce \emph{memcp} nebo \emph{memmove}.
 	\item static int x - u globální jako private. Je viditelná uvnitř modulu.
 	\item extern int x - společná proměnná pro několik modulu, stejný název.
 	\item inline - místo volaní se vloží. Dneska překladač um sám.
 \end{itemize}
+
+\paragraph{Příkazy}
+
+\begin{itemize}
+	\item prázdný příkaz se může hodit. Ale je potřeba dávat pozor
+
+	\begin{alltt}
+		while(...);
+	\end{alltt}
+	zopakuje prázdný příkaz do nekonečna.
+
+	Tady je ale potřeba napsat středníky, nebo \{\}
+	\begin{alltt}
+		if(...) a;
+		else b;
+	\end{alltt}
+
+	\item výraz je příkaz (vyhodnotí se side efekty)
+	\item for(a, b, c) cyklus je ekvivalentní tomuto
+	\begin{alltt}
+		a;
+		while(b)
+		\{
+			\tab příkazy;
+			\tab c;
+		\}
+	\end{alltt}
+
+	\item příkaz goto je potřeba použit v následujících případech
+		\begin{itemize}
+			\item break ze 2 a vice cyklů.
+			\item konečné automaty
+		\end{itemize}
+	\item jde zkombinovat while a switch
+	\begin{alltt}
+		switch()
+		\{
+		\tab while(b)
+		\tab \{
+		\tab 	\tab case 1:
+		\tab 	\tab ;
+		\tab \}
+		\}
+	\end{alltt}
+	Hodí se třeba pro zpracovaní poli po 4.
+	switch je pro $\mod 4$
+
+	\item \_static\_assert kontrola v čase kompilace, že např integer je nějaké velikosti
+\end{itemize}
+
+\subsection{Preprocesor}
+\begin{itemize}
+	\item proměnlivý \# argumentů, makro $\langle$ stdarg.h $\rangle$.
+		Taky makro va\_arg.
+	\item trigrafy, používat nechceme, historická záležitost, hlavně nepsat omylem ?? char.
+	\item \$include preprocesor nahrazuje kodem jiného souboru.
+		Preprocesor pracuje na pp-tokenech
+	\item gcc umí tzv linked optimisation - optimalizace mezi moduly.
+\end{itemize}
+
+\paragraph{Makra}
+Jsou 3 druhy
+\begin{enumerate}
+	\item s závorky (má argumenty). Např
+	\begin{alltt}
+		\# define P1(x) x + 1
+	\end{alltt}
+
+	\item s závorky (bez argumentů)
+	\begin{alltt}
+		\# define Z() null.
+	\end{alltt}
+	\item bez závorky (závorky nebudou části expanze)
+	\begin{alltt}
+		\# define X x.
+	\end{alltt}
+\end{enumerate}
+
+\begin{properties} Makra
+	\begin{itemize}
+		\item je zakázáno definovat stejné makro 2x.
+			Undef ale jde provést libovolně krát.
+			Proto v souborech často guardy.
+		\item dle konvence $\langle header \rangle$ hledá mezi systémové soubory.
+			$"header"$ - soubory definované programátorem.
+		\item \# se používá při generovaní kodu třeba pro vypsaní chybové hlášky aby odkazovalo na původní soubor.
+		\item \#pragma jsou specifické pro kompilátor.
+		\item při aritmetice v makrech je potřeba používat závorky.
+	\end{itemize}
+\end{properties}
+
+\paragraph{Ostatní}
+Nezařazené komentáře
+
+\begin{itemize}
+	\item size\_t určuje velikost objektů.
+	\item od C11 máme vnořené (lokální) funkce. Pro implementace se používá tzv trampolína (místo v pamětí kde se ukládají data)
+	\item kod pro defaultní hodnotu
+	\begin{alltt}
+		a?:b = a ? a : b
+	\end{alltt}
+	\item range v case
+	\begin{alltt}
+		case 1...5:
+			;
+	\end{alltt}
+	\item pokud jeden case propadá v další je konvenci psat komentář, jinak warning od kompilátoru
+	\begin{alltt}
+		case 1:
+			\tab ...
+			\tab // fall through
+		case 2:
+	\end{alltt}
+	\item \_\_auto = 5, stejně jako var v C\#.
+\end{itemize}
+
+\paragraph{GCC atributy}
+\begin{itemize}
+	\item hot (hodně optimalizovat, hot path)
+	\item cold (málo optimalizovat, moc se nespouští)
+	\item noinline (hlavně pro profilovaní)
+	\item flatten - inline všechno co se volá uvnitř.
+		Na co se hodí??
+	\item packed - nepřidávat padding
+\end{itemize}
+
+\subsection{Bitové triky}
+Bitové triky mimo jiné umožňuji vyhnout se podmíněným skokům, tzv branchless programovaní.
+Což hodně pomáhá branch predictoru.
+\begin{exercise}
+	\begin{enumerate}
+		\item bitová rotace
+		\item násobení konstantou
+		\item zaokrouhlení na nejbližší násobek 16
+		\item test zda je číslo mocnina 2ky
+		\item zaokrouhlit na nejbližší mocninu 2ky.
+		\item zrcadlení: bitová i bytová
+		\item abs hodnota
+		\item signum
+		\item parita, lichý nebo sudý \# jedniček
+	\end{enumerate}
+\end{exercise}
+\begin{proof}
+	1.
+	\begin{alltt}
+		(x >> k) | (x << (32 - k))
+	\end{alltt}
+	2. Rozepsat jako součet mocnin 2ky, pak
+	\begin{alltt}
+		(x << 4) + (x << 2) ...
+	\end{alltt}
+	3. Potřebujeme vynulovat spodní 4 bity
+	\begin{alltt}
+		x \& 1 ... 110000
+	\end{alltt}
+	Postup jak vyrobit masku
+	\begin{alltt}
+		~(1 << 4) - 1
+	\end{alltt}
+
+	Pro zaokrouhlení nahoru
+	\begin{alltt}
+		(x + 15)/16
+	\end{alltt}
+	uprostřed
+	\begin{alltt}
+		(x + 8)/16
+	\end{alltt}
+
+	4. Potřebujeme najít první jedničku vpravo
+	\begin{alltt}
+		x \& (~(x - 1)) == x
+	\end{alltt}
+	Pokud máme zaručený 2kový doplněk, tak
+	\begin{alltt}
+		x \& (x - 1) == 0
+	\end{alltt}
+
+	5. Máme v registru 0000x, kde x je posloupnost bitů začínající 1.
+	Vyrobíme stejně dlouhou posloupnost jedniček.
+	\begin{alltt}
+		x -= 1; //abychom dostali neostrou nerovnost
+		x |= x >> 16;
+		x |= x >> 8;
+		...
+		x |= x >> 1;
+
+		x += 1; //čímž dostaneme chtěnou mocninu 2ky
+	\end{alltt}
+
+	Pro dolní odhad na začátku přidáme
+	\begin{alltt}
+		x = (x >> 1) + 1;
+	\end{alltt}
+
+	6. Divide and Conquer
+	\begin{alltt}
+		(x >> 16) | (x << 16)
+		((x \& 0xff00ff00) >> 8) | ((x \& 0x00ff00ff) << 8)
+		...
+	\end{alltt}
+
+	7.
+	\begin{alltt}
+		y = x >> 31; (aritmetický posun)
+		(x ^ y) - y
+	\end{alltt}
+	Pro kladná y je same nuly. Dostaneme x.
+	Pro záporná
+	\[ x \textasciicircum y = \sim x = (-x - 1)\]
+	\[ (-x - 1) - y = (-x - 1) - 1 = -x \]
+
+	8. První řešení
+	\begin{alltt}
+		(x > 0) - (x < 0)
+	\end{alltt}
+	Druhé
+	\begin{alltt}
+		((unsigned)x) >> 31
+	\end{alltt}
+
+	9. Divide and Conquer
+	\begin{alltt}
+		x ^= (x >> 32);
+		x ^= (x >> 16);
+		x ^= (x >> 8);
+		x ^= (x >> 4);
+		x ^= (x >> 1);
+		// máme XOR všeho
+
+		x \&= 1;
+	\end{alltt}
+
+	10. Swap přes XOR. Funguje protože XOR je involuce
+	\begin{alltt}
+		a ^= b;
+		b ^= a;
+		a ^= b;
+	\end{alltt}
+
+	11. Jednostranný spojak přes XOR.
+	Místo pointru na next a prev uložíme
+	\[ prev \textasciicircum next \]
+	Posouváme se pomoci XORu.
+\end{proof}

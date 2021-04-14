@@ -1,0 +1,60 @@
+\section{\texorpdfstring{Hierarchie pameti}{Hierarchie pameti}}
+\vspace{5mm}
+\large
+
+\begin{definition}
+	Dynamická paměť - jeden kondensátor.
+
+	Každé čtení je destruktivní, takže čtení musí zároveň zapsat.
+	Musíme taky obnovovat data dejme tomu každé 100ms.
+\end{definition}
+
+Paměť je taky omezena kvůli rychlosti světla, paměť je moc daleko od CPU.
+Pokud máme 1Gz procesor, tak během jednoho taktu světlo uletí 30cm.
+
+Typy cache
+\begin{enumerate}
+	\item Plně asociativní cache. Zavedeme cache line (bloky).
+		V praxe se nepoužívá, protože potřebujeme hodně HW pro porovnávaní a shromažďovaní dat.
+	\item Přímo mapovaná cache
+
+		Nevýhody: (cache aliasing) viz uvodní příklad násobení matic při velikosti řádku $2^i$.
+	\item Kvůli nevýhodám 1, 2 používá se kompromis - Množinově asociativní cache.
+		Plně asociativní uvnitř podmnožin.
+	\item Dalším vylepšením je hierarchie cachi. Aby cache byla rychlá, musí být blízko procesoru, takže musí být malá. Proto první cache je malá, druhá je větší.
+\end{enumerate}
+
+Dotaz: menší instrukční sada, znamená lepší cachovani v $L1I$.
+
+\subsection{Memory Management Unit}
+
+\begin{note}
+Pozor $-O3$ optimalizaci neni rozumne zapinat gobalně, ale jenom lokalně kde očekáváme, že může vyrazně zlepšit.
+\end{note}
+
+\subsection{Cviko}
+
+\begin{example}
+	Při překladu prohozeni pole překladač nepočitá 2. index protože si pohopil, že procházíme pole sekvenčně.
+	Takže si pořidil 2 pointry které sinchronně incrementuje.
+\end{example}
+
+\begin{example}
+	V přikladu sqdiff najdeme bitový trik pro absolutní hodnotu.
+\end{example}
+
+\begin{example}
+	Najdeme zneužití instrukce \textbf{adcl} pro podminěné přičtení jedničky.
+\end{example}
+
+\begin{example}
+	Vypočet Fibonacci. Všimneme si, že -O3 nešahá do pamětí, všechno počita v registrech.
+
+	Pak místo +4 pro další prvek v pole, si pořidíme další pointer který ukazuje na 2. prvek v poli.
+\end{example}
+
+\begin{example}
+	V přikladu vypočtu polynomu při $-O3$ nejsou žadne cykly. Proč?
+
+	Protože kompilátor si všiml, že pole má pevnou velikost, proto cyklus byl uplně rozbalen.
+\end{example}
