@@ -29,3 +29,40 @@
 		\end{itemize}
 \end{itemize}
 
+\begin{exercise}
+	Jak vyrobit predikované množství cache missu?
+
+	Řešení: uděláme pole, kde prvky jsou stejně velké jako velikost cache line.
+	Pak procházet po poli.
+	Může ale vadit prefetch, pokud budeme procházet lineárně.
+	Můžeme randomizovat, nebo použit multiplikativní/aditivní grupy.
+\end{exercise}
+
+\begin{exercise}
+	Jak změřit velikost třeba L1 cache (pomoci perf)?
+
+	Řešení: uděláme pole, kde prvky jsou stejně velké jako velikost cache line.
+	Pak budeme binárním vyhledávaním měnit velikost pole dokud neuvidíme velký skok v cache missech.
+\end{exercise}
+
+\begin{exercise}
+	Jak změřit asociativitu třeba L1 cache (pomoci perf)?
+
+	Řešení: uděláme pole, kde prvky jsou stejně velké jako velikost cache line.
+	Pak přidáme velké mezery, taky by pomohlo pořídit velkou stránku (Linux, 4 GB)
+\end{exercise}
+
+\begin{exercise}
+	Jak změřit hodně krátkou událost (miněno takovou, že měření je řadově pomalejší)?
+
+	Řešení: zopakujeme vicekrát (řadově miliony) ve smyčce.
+	Problém ale je, že cykly jsou drahé, podobně volaní funkce.
+	Takže ideálně chceme rozbalit smyčky, vypnout optimalizaci a inlinovat.
+\end{exercise}
+
+\begin{note}
+	Jak perf měří když OS se přepíná mezi contexty? (context switch)
+
+	Stejně jako při volaní procedury, Linux uloží hodnoty flag registrů při context switche.
+\end{note}
+
