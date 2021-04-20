@@ -1,0 +1,281 @@
+\section{\texorpdfstring{Programování na SMP: Procesy a vlákna}{Programování na SMP: Procesy a vlákna}}
+\vspace{5mm}
+\large
+
+Jak programovat na SMP
+\begin{itemize}
+	\item Oddělené procesy: rozdělíme výpočet na paralelní kusy.
+		Data sdílíme přes Unixove sockety, roury apod.
+
+		Výpočet je ekvivalentní výpočtu na několika počítačích (třeba přes SSH).
+		Nevyužíváme že máme SMP.
+	\item Threads: kompletně sdílíme peměťový prostor.
+
+		Pozn: v Linuxu skoro není rozdíl mezi Procesem a Vláknem.
+
+		Vlákno ale mají vlastní IP a zásobník.
+
+		Kontejner funguje tak, že sdílí jen málo namespace (třeba nesdílí síťový).
+
+	\item Kompromis mezi dvěma přístupy nahoře: explicitní sdílení (např blok sdílené pamětí v Linuxu).
+\end{itemize}
+
+\begin{definition}
+	Unixovy signal - softwarová přerušení (procesu se posílá malé číslo). Program se zastaví, a vykoná daný signal.
+\end{definition}
+
+Porovnaní
+
+Problémy se sdílení
+\begin{itemize}
+	\item synchronizace
+		\begin{itemize}
+		\item race conditions
+		\item relativní viditelnost změn
+		\end{itemize}
+	\item efektivita
+		\begin{itemize}
+			\item MESSI když musí posílat cache line mezi procesory.
+			\item Ideálně chceme minimalizovat počet sdílených R/W data.
+			\item Falešné sdílení: read only a sdílená data ve stejné cache lině \\
+				Lze řešit zarovnáním, viz
+		\end{itemize}
+	\item bezpečnost syscallů a knihovní funkce (viz dokumentace funkce jestli lze použit paralelně).
+		Rozlišuje se toto:
+		\begin{itemize}
+			\item Nebezpečné
+			\item thread-safe
+			\item signal-safe
+			\item specifické záruky
+		\end{itemize}
+\end{itemize}
+
+\begin{example}
+	Příkladem specifické záruky je log.
+	Různá vlákna chtějí psát do logu.
+
+	Posouvaní ukázatelu na konec souboru (viz mode O\_APPEND) je atomické, takže nepotřebujeme zamykat.
+\end{example}
+
+Nechceme sdílet vůbec, takže třeba budeme redundantně kopírovat instanci pro každé vlákno.
+Pak sečteme po práci všech vláken.
+Toto vede na \emph{thread-local variables}.
+
+\subsection{Thread-local variables}
+
+\begin{itemize}
+	\item pthread\_getspecific - otravné a pomalé
+	\item GCC: \_\_thread
+	\item C11: \_Thread\_local (s použitím hlavičkového souboru, přejmenuje na thread\_local).
+\end{itemize}
+
+\begin{note}
+	\_Thread\_local se na Linuxu implementuje pomoci tzv segmentovaných registrů (historická featura).
+
+	Přičítá se offset segmentu k adrese.
+\end{note}
+
+\subsection{Synchronizační primitiva}
+
+Hlavně různé zámky.
+\begin{definition}
+	Synchronizační primitiva zaručuje že v daný okamžik se s daty pracuje pouze jediné vlákno.
+\end{definition}
+
+\begin{definition}
+	Mutex - mutual exclusion. Má stavy zamčeno/odemčeno.
+
+	Pokud voláme Lock(Acquire), čekáme až vlastník ho odemkne.
+	Pokud voláme Unlock(Release), tak na nic nečekáme.
+\end{definition}
+
+\begin{definition}
+	Semafor - stav je přirozené číslo.
+	Operace: Down, Up (snižení a zvyšení o 1).
+
+	Pokud nula s voláme down, čekáme pokud se zvýší na 1.
+
+	Pozn: operace se jmenuje všelijak různě.
+\end{definition}
+
+\begin{definition}
+	Condition variable - u mutexu nemůžeme počkat, až DS bude v nějakém stavu.
+
+	Stav: mutex + fronta čekajících procesu.
+
+	Operace: Wait(čekaní na změnu stavu), Signal.
+
+	Pak ručně kontrolujeme v jakém stavu je struktura, pokud stav je jiný - voláme Wait znovu.
+	Aby to bylo atomické, máme Mutex.
+
+	Příklad čekaní:
+	\begin{alltt}
+		mutex.Lock();
+		while(stav != wanted)
+		\tab condVar.Wait();
+		mutex.Unlock();
+	\end{alltt}
+
+	Příklad update:
+	\begin{alltt}
+		mutex.Lock();
+		stav = wanted;
+		mutex.Unlock();
+		condVar.Signal;
+	\end{alltt}
+\end{definition}
+
+\begin{example}
+	Fronta
+
+	Použijeme Mutex M(chraní vnitřní stav, aby nevznikal race condition pro vnitřní stav), Semafor S(počítá prvky).
+
+	\begin{alltt}
+		void Enqueve(x)
+		\{
+		\tab M.Lock();
+		\tab Add(x);
+		\tab M.Unlock();
+		\tab S.Up
+		\}
+	\end{alltt}
+
+	\begin{alltt}
+		void Dequeve(x)
+		\{
+		\tab S.Down
+		\tab M.Lock();
+		\tab Remove(x);
+		\tab M.Unlock();
+		\}
+	\end{alltt}
+
+	Mutex je korektní: nevzníkné deadlock, uvnitř Mutexu nic nezamykáme.
+	Co ale Semafor? Co když po $S.Down$ nikdo jiný odstraní prvek dřív než já?
+
+	Invariant (rezervace na prvky): \# prvků v seznamu $=$ semafor + \# rezervaci.
+	Platí když není zamčený Mutex.
+\end{example}
+
+\subsubsection{Rychlost}
+Kdysi každá operace s synchronizační primitivy potřebuje Kernel volaní (potřebujeme uspívat vlákna).
+
+Na Linuxu pokud nehrozí race condition, tak všechno se odehrává v user space (futex).
+Pokud ale může race condition, jdeme do Kernelu.
+
+\begin{note}
+	Bache, zámek způsobí sdílena R/W mezí procesory (sběrnice).
+	Takže implementace sama o sobě není pomalá, ale kvůli pamětí jo.
+\end{note}
+
+\begin{definition}
+	Granularita: zámek na každý prvek nebo na celou DS obecně.
+
+	Existuje ale kompromis: hash zámky.
+	Musíme davat zámky do různých cache line.
+\end{definition}
+
+\subsection{Race Conditions}
+
+\begin{definition}
+	Deadlock
+\end{definition}
+
+
+\section{\texorpdfstring{Cvičení SMP}{Cvičení SMP}}
+\vspace{5mm}
+\large
+
+\begin{example}
+	Paralelizace přes xargs
+	\begin{alltt}
+		xargs -n
+	\end{alltt}
+
+\end{example}
+
+\begin{example}
+	fork: kopirovaní procesu.
+	Předpřipravíme DS (init), pak jen kopirujeme proces.
+
+	Kdyby jen kopírovaní, tak hodně pomalé. Použijeme trick copyon write mechanismus.
+
+	Data jsou readonly, při zapisu kernelové přirušení, stranka se nakopiruje do lokalní kopie.
+\end{example}
+
+\begin{note}
+	Fork vrací 2x, aby šlo odlišit kde jsme.
+	\begin{alltt}
+		int main()\{
+		\tab if(fork() == 0) // potomek
+		\tab else \\rodič, dostane pid potomka
+		\}
+	\end{alltt}
+
+\end{note}
+Pomocné funkce
+\begin{itemize}
+	\item \textbf{waitpid} - čeká na process.
+	\item \textbf{\_exit} vracení z potomka.
+\end{itemize}
+
+\begin{example}
+	NGINX používá všude fork, protože když spadne jeden worker, tak master ho může předat dalšímu. Ostatní workery to neovlivní.
+\end{example}
+
+\subsection{Pthreads}
+
+Proč $void*$, protože typovací systém C. Chceme ale moct přidat cokoliv.
+
+Funkce:
+\begin{itemize}
+	\item \textbf{pthread\_create} - vytváří vlákna.
+	\item \textbf{pthread\_join} - čeká až vlákna doběhnou.
+\end{itemize}
+
+pthreads\_rwlock
+neomezený read, ale pokud někdo zapisuje - ostatní nemohou číst.
+
+\subsection{Atomické operace}
+
+GCC(na nativním typu pro procesor, typicky Long)
+\begin{itemize}
+	\item \_\_sync\_fetch\_and\_add - atomický ++\\
+		podobně XOR, SUB, AND
+
+		Pokud procesor neumí, tak se asi nepřeloží.
+	\item \_\_sync\_compare\_and\_swap - atomický swap\\
+		Separátně pro bool a int.
+	\begin{alltt}
+		int compare_addex(\& addr, oldval, newval)\{
+		\tab if(*addr == oldval)
+		\tab \tab *addr = newval;
+		\tab \}
+	\end{alltt}
+	pokud vrátí \textbf{oldval} tak se změna povedla, jinak nepovedla.
+\end{itemize}
+
+\begin{exercise}
+	Počet dělitelů čísla.
+\end{exercise}
+
+\begin{exercise}
+	Faktorizace.
+\end{exercise}
+
+\begin{exercise}
+	Pomoci atomických operaci lock-free spojak.
+	Pro jednoduchost jednosměrný a umí
+	\begin{itemize}
+		\item insert (začátek nebo konec?)
+		\item můžeme jednoduše udělat Delete?
+	\end{itemize}
+
+	Procházíme do konce, pak použijeme atomický swap.
+	Nebo taky na začátek, pak nemusíme aktualizovat tail pointer.
+\end{exercise}
+
+\begin{note}
+	Pokud měříme čas běhu vice vláknového programu, tak to dá násobek reálného času.
+	Můžeme změřit čas strávený každým vláknem pomoci $clock\_gettime$.
+\end{note}
