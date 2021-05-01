@@ -1,0 +1,56 @@
+\section{\texorpdfstring{Paralelní programovaní cvičení 2}{Paralelní programovaní cvičení 2}}
+\vspace{5mm}
+\large
+
+Odevzdává se pouze kod, nemůžeme měnit Makefile.
+Pokud nějaké rozumná změna napadne, tak napsat.
+
+Vektorové instrukce hodně pomůžou při řešení.
+
+\subsection{Debugování s vlákny}
+Příkazy gdb:
+\begin{itemize}
+	\item bt -
+	\item info threads - vlákna
+	\item thread \# - přepíná na vlákno
+	\item f \# - přepíná na položku v framu
+\end{itemize}
+
+Jak přidat ladicí symboly knihovny \emph{pthreads} pro debugovaní
+
+\_\_owner - ProcessId vlákna které zamklo zámek.
+
+\begin{example}
+	Jak v příkladě na faktorizaci přidat synchronizační body mezi vlákny.
+	Aby každé vlákno počkalo, pokud do toho bodu doběhnou ostatní.
+
+	Vláken je známy počet.
+
+	Řešení 1: pořídit atomický counter, pak semafor.
+	Když vlákno doběhne, tak zvýší counter o 1 a pokud už se rovna N, tak probudit všechna vlákna.
+
+	Řešení 2: pořídit podmíněnou proměnnou.
+	Pokud vlákno je v bodu, tak zamkne zámek.
+	Incrementuje proměnnou a pokud už je N, tak probudí všechna vlákna.
+	Jinak čeká, pokud proměnná má hodnotu N.
+\end{example}
+
+Conditional variable
+\begin{itemize}
+	\item pthread\_cond\_init - inicializuje conditional variable.
+	\item pthread\_cond\_wait - čekám až nabude nějaké hodnoty.\\
+		Pokud budeme volat tuto funkci ve while, tak to nefunguje jako půlení.
+		Takže vlákno se probudí jenom na dotaz o conditional variable a pas spí.
+
+	\item pthread\_cond\_broadcast - probudím všechny čekající.
+	\item pthread\_cond\_signal - probudí jen několik?
+\end{itemize}
+
+Poučení: používat atomická operace co nejmíň. Co nejvíc si ukládat thread-local.
+
+\subsection{Odbočka}
+Časovač - specialní jednotka která se periodický incrementuje, při přetečení vyvolá interrupt.
+
+Pokud interrup je drahý, jak pravidelní generovat 0, 1 periodický?
+
+Řešení: generovat 0, 1 ve smyčce, pak použit klasické AIM triky: rozbalení, inline assembler atd.
